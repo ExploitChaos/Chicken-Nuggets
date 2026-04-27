@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>THE NUGGET DREAMLAND</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Archivo+Black&display=swap');
+
+        body, html { 
+            margin: 0; padding: 0; width: 100%; height: 100%; 
+            overflow: hidden; background: #1a1a1a; /* Fallback color */
+            font-family: 'Archivo Black', sans-serif;
+            user-select: none;
+        }
+        
+        #start-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #ffcc00;
+            display: flex; justify-content: center; align-items: center;
+            z-index: 9999; cursor: pointer;
+        }
+
+        #start-button {
+            padding: 30px 60px; font-size: 3rem;
+            background: #ff0000; color: white;
+            border: 10px solid black; border-radius: 20px;
+            box-shadow: 10px 10px 0px black; text-align: center;
+        }
+
+        #bg-video {
+            position: fixed;
+            top: 50%; left: 50%;
+            min-width: 100%; min-height: 100%;
+            width: auto; height: auto;
+            z-index: -1;
+            transform: translate(-50%, -50%);
+            filter: brightness(0.6) contrast(1.2);
+            object-fit: cover;
+            background: black; /* Visual backup */
+        }
+
+        #ui-layer {
+            position: fixed;
+            top: 20px; width: 100%;
+            z-index: 10; text-align: center;
+            color: white; pointer-events: none;
+            display: none;
+        }
+
+        .letter {
+            position: absolute;
+            font-size: clamp(3.5rem, 12vw, 6rem);
+            font-weight: 900; color: #ffff00;
+            cursor: pointer; z-index: 100;
+            pointer-events: auto;
+            text-shadow: 4px 4px 0px #ff0000, 8px 8px 20px rgba(0,0,0,1);
+            -webkit-text-stroke: 2px black;
+            display: none;
+        }
+
+        #progress {
+            font-size: 1.5rem;
+            background: rgba(0,0,0,0.8);
+            display: inline-block; padding: 15px 25px;
+            border: 3px solid #ffcc00; border-radius: 50px;
+            letter-spacing: 3px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="start-overlay">
+        <div id="start-button">CLICK TO<br>START DREAMLAND</div>
+    </div>
+
+    <video id="bg-video" loop playsinline muted>
+        <source src="./nugget_video.mp4" type="video/mp4">
+        <source src="nugget_video.webm" type="video/webm">
+        <source src="nugget_video.mp4" type="video/mp4">
+    </video>
+
+    <div id="ui-layer">
+        <div id="progress"></div>
+        <p style="margin-top:10px; text-shadow: 2px 2px 5px black;">COLLECT THE NUGGETS TO LEAVE</p>
+    </div>
+
+    <script>
+        const phrase = "CHICKENNUGGET";
+        let currentIndex = 0;
+        const video = document.getElementById('bg-video');
+        const progressEl = document.getElementById('progress');
+        
+        progressEl.innerHTML = phrase.split('').map(() => `<span>_</span>`).join(' ');
+
+        let audioCtx, source, gainNode;
+
+        function startEverything() {
+            // Force the video to attempt playback
+            video.muted = false;
+            video.play().catch(err => {
+                console.error("Local video load failed:", err);
+            });
+
+            // Set up the audio boost
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                source = audioCtx.createMediaElementSource(video);
+                gainNode = audioCtx.createGain();
+                gainNode.gain.value = 4.0; 
+                source.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+            }
+
+            document.getElementById('start-overlay').style.display = 'none';
+            document.getElementById('ui-layer').style.display = 'block';
+            document.querySelectorAll('.letter').forEach(l => l.style.display = 'block');
+
+            if (document.documentElement.requestFullscreen) {
+                document.documentElement.requestFullscreen().catch(() => {});
+            }
+        }
+
+        function createLetter(char, index) {
+            const el = document.createElement('div');
+            el.className = 'letter';
+            el.innerText = char;
+            document.body.appendChild(el);
+
+            let x = Math.random() * 70 + 10;
+            let y = Math.random() * 70 + 10;
+            let dx = (Math.random() - 0.5) * 1.5; 
+            let dy = (Math.random() - 0.5) * 1.5;
+
+            function move() {
+                if (!el.parentNode) return;
+                x += dx; y += dy;
+                if (x < 5 || x > 85) dx *= -1;
+                if (y < 5 || y > 85) dy *= -1;
+                el.style.left = x + 'vw';
+                el.style.top = y + 'vh';
+                requestAnimationFrame(move);
+            }
+            move();
+
+            el.addEventListener('pointerdown', () => {
+                if (char === phrase[currentIndex] && index === currentIndex) {
+                    progressEl.children[currentIndex].innerText = char;
+                    progressEl.children[currentIndex].style.color = '#00ff00';
+                    currentIndex++;
+                    el.remove();
+                    if (currentIndex === phrase.length) {
+                        alert("ESCAPE SUCCESSFUL.");
+                        window.location.reload();
+                    }
+                }
+            });
+        }
+
+        document.getElementById('start-overlay').addEventListener('click', startEverything);
+        phrase.split('').forEach((char, i) => createLetter(char, i));
+    </script>
+</body>
+</html>
