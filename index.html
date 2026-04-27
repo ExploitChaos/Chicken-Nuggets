@@ -9,7 +9,8 @@
 
         body, html { 
             margin: 0; padding: 0; width: 100%; height: 100%; 
-            overflow: hidden; background: #1a1a1a; /* Fallback color */
+            overflow: hidden; 
+            background: black; /* Restored pure black background */
             font-family: 'Archivo Black', sans-serif;
             user-select: none;
         }
@@ -29,16 +30,17 @@
             box-shadow: 10px 10px 0px black; text-align: center;
         }
 
+        /* --- THE FIXED BACKGROUND VIDEO LAYER --- */
         #bg-video {
             position: fixed;
             top: 50%; left: 50%;
             min-width: 100%; min-height: 100%;
             width: auto; height: auto;
-            z-index: -1;
+            z-index: 0; /* Brings video in front of background color, but behind UI */
             transform: translate(-50%, -50%);
             filter: brightness(0.6) contrast(1.2);
             object-fit: cover;
-            background: black; /* Visual backup */
+            pointer-events: none; /* Let users click through the video to the letters */
         }
 
         #ui-layer {
@@ -100,10 +102,10 @@
             // Force the video to attempt playback
             video.muted = false;
             video.play().catch(err => {
-                console.error("Local video load failed:", err);
+                console.error("Video load failed:", err);
             });
 
-            // Set up the audio boost
+            // Set up the 400% audio boost
             if (!audioCtx) {
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 source = audioCtx.createMediaElementSource(video);
@@ -113,10 +115,12 @@
                 gainNode.connect(audioCtx.destination);
             }
 
+            // Hide start screen, reveal game layer
             document.getElementById('start-overlay').style.display = 'none';
             document.getElementById('ui-layer').style.display = 'block';
             document.querySelectorAll('.letter').forEach(l => l.style.display = 'block');
 
+            // Force fullscreen mode
             if (document.documentElement.requestFullscreen) {
                 document.documentElement.requestFullscreen().catch(() => {});
             }
@@ -136,20 +140,25 @@
             function move() {
                 if (!el.parentNode) return;
                 x += dx; y += dy;
+                
+                // Screen bounce physics
                 if (x < 5 || x > 85) dx *= -1;
                 if (y < 5 || y > 85) dy *= -1;
+                
                 el.style.left = x + 'vw';
                 el.style.top = y + 'vh';
                 requestAnimationFrame(move);
             }
             move();
 
+            // Handle clicking the letters
             el.addEventListener('pointerdown', () => {
                 if (char === phrase[currentIndex] && index === currentIndex) {
                     progressEl.children[currentIndex].innerText = char;
                     progressEl.children[currentIndex].style.color = '#00ff00';
                     currentIndex++;
                     el.remove();
+                    
                     if (currentIndex === phrase.length) {
                         alert("ESCAPE SUCCESSFUL.");
                         window.location.reload();
@@ -158,8 +167,12 @@
             });
         }
 
+        // Initialize the game
         document.getElementById('start-overlay').addEventListener('click', startEverything);
         phrase.split('').forEach((char, i) => createLetter(char, i));
+        
+        // Prevent right-clicking to escape
+        document.addEventListener('contextmenu', event => event.preventDefault());
     </script>
 </body>
 </html>
